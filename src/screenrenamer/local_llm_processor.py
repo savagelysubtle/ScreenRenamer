@@ -55,6 +55,7 @@ class LLMProcessor:
 
             # Load MiniCPM-V model with proper image processor handling
             import warnings
+
             from transformers import AutoModel, AutoTokenizer  # type: ignore
 
             # Suppress the specific FutureWarning about image_processor_class
