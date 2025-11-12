@@ -3,10 +3,10 @@
 import time
 import warnings
 from pathlib import Path
+from typing import Any
 
 import torch
 from PIL import Image
-from transformers import AutoModel, AutoTokenizer
 
 from .config import LLMConfig, get_config
 from .logger import get_logger
@@ -22,8 +22,8 @@ class LLMProcessor:
     def __init__(self, config: LLMConfig | None = None):
         self.config = config or get_config().llm
         self.logger = get_logger("local_llm_processor")
-        self.model: AutoModel | None = None
-        self.tokenizer: AutoTokenizer | None = None
+        self.model: Any = None  # Will be loaded dynamically with trust_remote_code
+        self.tokenizer: Any = None  # Will be loaded dynamically
         self._model_loaded = False
 
     def _ensure_model_loaded(self) -> None:
@@ -36,7 +36,9 @@ class LLMProcessor:
 
             # Check CUDA availability
             if not torch.cuda.is_available():
-                raise RuntimeError("CUDA is not available. This model requires GPU acceleration and cannot run on CPU.")
+                raise RuntimeError(
+                    "CUDA is not available. This model requires GPU acceleration and cannot run on CPU."
+                )
 
             device = torch.device("cuda")
             self.logger.info(f"🖥️ Using GPU: {torch.cuda.get_device_name(0)}")
@@ -53,13 +55,16 @@ class LLMProcessor:
 
             # Load MiniCPM-V model with proper image processor handling
             import warnings
+            from transformers import AutoModel, AutoTokenizer  # type: ignore
 
             # Suppress the specific FutureWarning about image_processor_class
             with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=FutureWarning,
-                                       message=".*image_processor_class.*")
-                warnings.filterwarnings("ignore", category=UserWarning,
-                                       message=".*slow image processor.*")
+                warnings.filterwarnings(
+                    "ignore", category=FutureWarning, message=".*image_processor_class.*"
+                )
+                warnings.filterwarnings(
+                    "ignore", category=UserWarning, message=".*slow image processor.*"
+                )
 
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     model_path,

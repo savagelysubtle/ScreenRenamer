@@ -17,6 +17,7 @@ external dependencies required - model downloads automatically on first setup.
 - ⚙️ **Configurable**: Highly customizable through environment variables and CLI
   options
 - 📊 **Rich CLI**: Beautiful terminal interface with status monitoring
+- 🚀 **Quick Launch**: Double-click batch files to start from anywhere (Windows)
 
 ## Requirements
 
@@ -25,7 +26,30 @@ external dependencies required - model downloads automatically on first setup.
 - **Disk Space**: ~8GB for MiniCPM-V model (downloaded automatically)
 - **UV**: For package management (recommended)
 
-## Installation
+## Quick Start (Windows)
+
+### Using Batch Files (Easiest)
+
+1. **First Time Setup**:
+
+   - Double-click `setup-screenrenamer.bat`
+   - Follow the prompts to configure your screenshot folder
+
+2. **Start Watching**:
+
+   - Double-click `start-screenrenamer.bat`
+   - The app will run in a window you can minimize
+
+3. **Optional - Create Desktop Shortcuts**:
+
+   - Double-click `create-desktop-shortcuts.bat`
+   - You'll get shortcuts on your desktop for easy access
+
+4. **Test Connection**:
+   - Double-click `test-screenrenamer.bat`
+   - Verifies CUDA and model are working
+
+### Manual Installation
 
 ### 1. Install UV (Package Manager)
 

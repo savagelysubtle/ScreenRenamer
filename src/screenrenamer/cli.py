@@ -164,18 +164,25 @@ class ScreenRenamerCLI:
             self.console.print("\n[bold cyan]Step 1: Verifying CUDA Support[/bold cyan]")
             try:
                 import torch
+
                 if torch.cuda.is_available():
-                    self.console.print(f"[green]✓ CUDA is available: PyTorch {torch.__version__}[/green]")
+                    self.console.print(
+                        f"[green]✓ CUDA is available: PyTorch {torch.__version__}[/green]"
+                    )
                     self.console.print(f"[dim]GPU: {torch.cuda.get_device_name(0)}[/dim]")
                     cuda_ok = True
                 else:
-                    self.console.print(f"[yellow]⚠️  PyTorch {torch.__version__} installed but CUDA not detected[/yellow]")
-                    self.console.print("[dim]Make sure you have CUDA-compatible GPU and drivers installed[/dim]")
+                    self.console.print(
+                        f"[yellow]⚠️  PyTorch {torch.__version__} installed but CUDA not detected[/yellow]"
+                    )
+                    self.console.print(
+                        "[dim]Make sure you have CUDA-compatible GPU and drivers installed[/dim]"
+                    )
                     cuda_ok = False
             except ImportError:
                 self.console.print("[red]✗ PyTorch not installed. Run 'uv sync' first.[/red]")
                 cuda_ok = False
-            
+
             if not cuda_ok:
                 proceed = Confirm.ask("\n[bold]Continue with setup anyway?[/bold]", default=False)
                 if not proceed:
@@ -249,13 +256,10 @@ class ScreenRenamerCLI:
             self.console.print(f"[dim]🤖 Model: {config.llm.model_name}[/dim]")
             if cuda_ok:
                 import torch
+
                 self.console.print(f"[dim]🖥️  GPU: {torch.cuda.get_device_name(0)}[/dim]")
-            self.console.print(
-                "\n[dim]You can now run: screenrenamer test  # Test the setup[/dim]"
-            )
-            self.console.print(
-                "[dim]              screenrenamer start # Start watching[/dim]"
-            )
+            self.console.print("\n[dim]You can now run: screenrenamer test  # Test the setup[/dim]")
+            self.console.print("[dim]              screenrenamer start # Start watching[/dim]")
 
         except KeyboardInterrupt:
             self.console.print("\n[yellow]Setup cancelled.[/yellow]")
