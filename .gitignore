@@ -67,3 +67,5 @@ logs/
 *.tar.gz
 *.whl
 .env
+
+@modles/
