@@ -70,6 +70,7 @@ class LLMProcessor:
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     model_path,
                     trust_remote_code=True,
+                    use_fast=False,
                 )
                 self.model = AutoModel.from_pretrained(
                     model_path,

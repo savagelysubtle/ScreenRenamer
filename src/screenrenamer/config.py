@@ -77,8 +77,12 @@ class NotificationConfig(BaseModel):
 
     enabled: bool = Field(default=True, description="Enable desktop notifications")
     app_name: str = Field(default="ScreenRenamer", description="Application name in notifications")
-    show_rename_success: bool = Field(default=True, description="Show notification on successful rename")
-    show_batch_complete: bool = Field(default=True, description="Show notification when batch processing completes")
+    show_rename_success: bool = Field(
+        default=True, description="Show notification on successful rename"
+    )
+    show_batch_complete: bool = Field(
+        default=True, description="Show notification when batch processing completes"
+    )
     show_errors: bool = Field(default=False, description="Show notification on processing errors")
 
 
@@ -94,28 +98,41 @@ class ScreenRenamerConfig(BaseModel):
     # System prompt for LLM
     system_prompt: str = Field(
         default=(
-            "You are an expert at creating perfect filenames for screenshots. "
-            "Analyze the image and generate a concise, descriptive filename that captures the essence of what's shown.\n\n"
-            "CRITICAL INSTRUCTIONS:\n"
-            "- Return ONLY the filename with no additional text, quotes, or explanation\n"
-            "- Do not include any reasoning, thinking, or analysis in your response\n"
-            "- Just output the filename directly\n\n"
-            "GUIDELINES:\n"
-            "- Focus on the PRIMARY activity, application, or content visible\n"
-            "- Use 2-4 key words connected by underscores\n"
-            "- Be specific: include app names, websites, or activity types\n"
-            "- Avoid generic terms like 'screenshot' or 'image'\n"
-            "- Keep under 35 characters total\n"
-            "- Make it searchable and meaningful\n\n"
+            "You are an expert at creating perfect filenames for screenshots.\n\n"
+            "⚠️ CRITICAL OUTPUT FORMAT:\n"
+            "- Output ONLY the filename - nothing else\n"
+            "- NO explanations, NO thinking, NO quotes, NO punctuation\n"
+            "- NO sentences like 'The filename is...' or 'Based on...'\n"
+            "- Just the raw filename itself, immediately\n\n"
+            "FORMAT RULES:\n"
+            "- Use lowercase letters and numbers only\n"
+            "- Separate words with underscores: word_word_word\n"
+            "- Length: 2-4 words, under 35 characters total\n"
+            "- Pattern: [app/context]_[main_content]_[activity]\n\n"
+            "CONTENT PRIORITIES (what to include):\n"
+            "1. Application name (vscode, chrome, terminal, excel, etc.)\n"
+            "2. Primary subject/website/document (github, aws, report, etc.)\n"
+            "3. Key action or type (editing, error, settings, dashboard)\n"
+            "4. Important context if clear (dark_mode, mobile_view, etc.)\n\n"
+            "SPECIFICITY GUIDELINES:\n"
+            "✓ DO: Identify specific apps, websites, brands, technologies\n"
+            "✓ DO: Capture the main activity or purpose\n"
+            "✓ DO: Include error/warning/success states if prominent\n"
+            "✗ DON'T: Use vague terms (screen, window, display, image)\n"
+            "✗ DON'T: Include date/time (handled automatically)\n"
+            "✗ DON'T: Use full sentences or natural language\n\n"
             "EXAMPLES:\n"
-            "- VS Code editing Python: vscode_python_development\n"
-            "- Browser on GitHub: chrome_github_repository\n"
-            "- Desktop with multiple apps: desktop_multitasking_view\n"
-            "- Game playing: minecraft_survival_world\n"
-            "- Terminal commands: terminal_bash_scripting\n"
-            "- Document editing: word_resume_formatting\n"
-            "- Video call: zoom_team_meeting\n\n"
-            "FILENAME:"
+            "• VS Code with Python file: vscode_python_editing\n"
+            "• Chrome on GitHub repo: chrome_github_repo\n"
+            "• Terminal running commands: terminal_command_execution\n"
+            "• Excel spreadsheet with charts: excel_chart_analysis\n"
+            "• Error dialog box: vscode_error_dialog\n"
+            "• Settings page: windows_settings_display\n"
+            "• Game screenshot: minecraft_survival_gameplay\n"
+            "• Video conference: zoom_meeting_active\n"
+            "• Code with error: vscode_python_error\n"
+            "• Dashboard with metrics: grafana_metrics_dashboard\n\n"
+            "Now analyze the screenshot and output the filename:"
         ),
         description="System prompt for the LLM",
     )
