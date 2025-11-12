@@ -6,8 +6,9 @@ from pathlib import Path
 from .config import ScreenRenamerConfig, get_config, set_config
 from .file_renamer import FileRenamer
 from .folder_watcher import FolderWatcher
-from .llm_processor import LLMProcessor
+from .local_llm_processor import LLMProcessor
 from .logger import get_logger, setup_logging
+from .notifications import NotificationManager
 
 
 class ScreenRenamerOrchestrator:
@@ -33,6 +34,12 @@ class ScreenRenamerOrchestrator:
 
         self.logger.debug("📁 Initializing file renamer...")
         self.file_renamer = FileRenamer(self.config.renamer)
+
+        self.logger.debug("🔔 Initializing notification manager...")
+        self.notifications = NotificationManager(
+            app_name=self.config.notifications.app_name,
+            enabled=self.config.notifications.enabled
+        )
 
         self.watcher: FolderWatcher | None = None
         self._processed_files = set()  # Track processed files to avoid duplicates
@@ -87,11 +94,24 @@ class ScreenRenamerOrchestrator:
             total_time = time.time() - start_time
             self.logger.info(f"🎉 Successfully processed: {file_path.name} -> {new_path.name} (total: {total_time:.2f}s)")
 
+            # Send success notification
+            if self.config.notifications.show_rename_success:
+                self.notifications.send_file_renamed_notification(
+                    old_filename=file_path.name,
+                    new_filename=new_path.name,
+                    folder_path=file_path.parent
+                )
+
         except Exception as e:
             error_time = time.time() - start_time
             self.logger.error(f"❌ Failed to process {file_path.name} after {error_time:.2f}s: {e}")
             self.logger.debug(f"🔍 Error type: {type(e).__name__}")
             self.logger.debug(f"📋 Error details: {e!s}", exc_info=True)
+
+            # Send error notification
+            if self.config.notifications.show_errors:
+                self.notifications.send_error_notification(str(e))
+
             # Don't re-raise - we want to continue processing other files
 
     def test_llm_connection(self) -> bool:
@@ -108,7 +128,7 @@ class ScreenRenamerOrchestrator:
                 self.logger.info(f"✅ LLM connection test passed in {test_time:.2f}s")
             else:
                 self.logger.warning(f"⚠️ LLM connection test failed in {test_time:.2f}s")
-                self.logger.debug("📋 Check that Ollama is running and the model is downloaded")
+                self.logger.debug("📋 Check that the model is available in @models/ and CUDA is working")
 
             return result
 
@@ -136,7 +156,7 @@ class ScreenRenamerOrchestrator:
         # Test LLM connection first
         self.logger.info("🔗 Verifying LLM service availability...")
         if not self.test_llm_connection():
-            raise RuntimeError("LLM service is not available. Please ensure Ollama is running and the model is downloaded.")
+            raise RuntimeError("LLM service is not available. Please ensure the model is available in @models/ and CUDA is working. Run 'screenrenamer setup' to download the model.")
 
         # Create and start watcher
         self.logger.debug("👀 Creating folder watcher...")
@@ -192,7 +212,7 @@ class ScreenRenamerOrchestrator:
         self.logger.info("🔄 Starting batch processing of existing files...")
 
         if not self.test_llm_connection():
-            raise RuntimeError("LLM service is not available. Please ensure Ollama is running and the model is downloaded.")
+            raise RuntimeError("LLM service is not available. Please ensure the model is available in @models/ and CUDA is working. Run 'screenrenamer setup' to download the model.")
 
         watch_path = self.config.watcher.watch_path
         patterns = self.config.watcher.patterns
@@ -264,6 +284,13 @@ class ScreenRenamerOrchestrator:
         self.logger.debug(f"⏱️ Total processing time: {total_time:.2f}s")
         self.logger.debug(f"📈 Success rate: {(processed_count / max(total_files, 1)) * 100:.1f}%")
 
+        # Send batch completion notification
+        if self.config.notifications.show_batch_complete and processed_count > 0:
+            self.notifications.send_processing_complete_notification(
+                file_count=processed_count,
+                folder_path=self.config.watcher.watch_path
+            )
+
     def get_status(self) -> dict:
         """Get current status of the orchestrator."""
         self.logger.debug("📊 Generating status report...")
@@ -288,6 +315,7 @@ class ScreenRenamerOrchestrator:
             "llm_available": llm_available,
             "processed_files_count": len(self._processed_files),
             "file_patterns": self.config.watcher.patterns,
+            "notifications_enabled": self.config.notifications.enabled,
         }
 
         self.logger.debug(f"📈 Status: watching={watching}, llm_available={llm_available}, processed={len(self._processed_files)}")

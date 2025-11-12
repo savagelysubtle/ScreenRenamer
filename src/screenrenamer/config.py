@@ -27,8 +27,7 @@ if TYPE_CHECKING:
 class LLMConfig(BaseModel):
     """Configuration for the local LLM."""
 
-    model_name: str = Field(default="openbmb/minicpm-v4.5:8b", description="Ollama model name")
-    base_url: str = Field(default="http://localhost:11434", description="Ollama server URL")
+    model_name: str = Field(default="openbmb/MiniCPM-V-4_5", description="Hugging Face model name")
     timeout: int = Field(default=120, description="Request timeout in seconds")
     temperature: float = Field(default=0.3, ge=0.0, le=1.0, description="LLM temperature")
     max_tokens: int = Field(default=200, description="Maximum tokens in response")
@@ -73,6 +72,16 @@ class LoggingConfig(BaseModel):
     )
 
 
+class NotificationConfig(BaseModel):
+    """Configuration for desktop notifications."""
+
+    enabled: bool = Field(default=True, description="Enable desktop notifications")
+    app_name: str = Field(default="ScreenRenamer", description="Application name in notifications")
+    show_rename_success: bool = Field(default=True, description="Show notification on successful rename")
+    show_batch_complete: bool = Field(default=True, description="Show notification when batch processing completes")
+    show_errors: bool = Field(default=False, description="Show notification on processing errors")
+
+
 class ScreenRenamerConfig(BaseModel):
     """Main configuration for ScreenRenamer."""
 
@@ -80,6 +89,7 @@ class ScreenRenamerConfig(BaseModel):
     watcher: WatcherConfig
     renamer: RenamerConfig = Field(default_factory=RenamerConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
+    notifications: NotificationConfig = Field(default_factory=NotificationConfig)
 
     # System prompt for LLM
     system_prompt: str = Field(
@@ -140,15 +150,23 @@ class ScreenRenamerConfig(BaseModel):
 
         # Override other settings from environment
         llm_config = LLMConfig(
-            model_name=os.getenv("SCREENRENAMER_LLM_MODEL", "llama3.2-vision:11b"),
-            base_url=os.getenv("SCREENRENAMER_LLM_URL", "http://localhost:11434"),
+            model_name=os.getenv("SCREENRENAMER_LLM_MODEL", "openbmb/MiniCPM-V-4_5"),
             timeout=int(os.getenv("SCREENRENAMER_LLM_TIMEOUT", "120")),
             temperature=float(os.getenv("SCREENRENAMER_LLM_TEMPERATURE", "0.1")),
+        )
+
+        # Create notification config from environment
+        notification_config = NotificationConfig(
+            enabled=os.getenv("SCREENRENAMER_NOTIFICATIONS_ENABLED", "true").lower() == "true",
+            show_rename_success=os.getenv("SCREENRENAMER_NOTIFY_SUCCESS", "true").lower() == "true",
+            show_batch_complete=os.getenv("SCREENRENAMER_NOTIFY_BATCH", "true").lower() == "true",
+            show_errors=os.getenv("SCREENRENAMER_NOTIFY_ERRORS", "false").lower() == "true",
         )
 
         return cls(
             llm=llm_config,
             watcher=watcher_config,
+            notifications=notification_config,
             system_prompt=os.getenv(
                 "SCREENRENAMER_SYSTEM_PROMPT", cls.model_fields["system_prompt"].default
             ),

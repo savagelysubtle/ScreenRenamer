@@ -1,9 +1,9 @@
 # ScreenRenamer
 
-AI-powered screenshot renamer with embedded MiniCPM-V vision model. Automatically
-watches a folder for new screenshots and renames them based on their content
-using a locally embedded vision-capable language model. No external dependencies
-required - model downloads automatically on first setup.
+AI-powered screenshot renamer with embedded MiniCPM-V vision model.
+Automatically watches a folder for new screenshots and renames them based on
+their content using a locally embedded vision-capable language model. No
+external dependencies required - model downloads automatically on first setup.
 
 ## Features
 
@@ -20,7 +20,8 @@ required - model downloads automatically on first setup.
 
 ## Requirements
 
-- **Python**: 3.14+
+- **Python**: 3.13+
+- **GPU**: NVIDIA GPU with CUDA 12.x support (required for local model)
 - **Disk Space**: ~8GB for MiniCPM-V model (downloaded automatically)
 - **UV**: For package management (recommended)
 
@@ -42,24 +43,44 @@ pip install uv
 git clone https://github.com/yourusername/screenrenamer.git
 cd screenrenamer
 
-# Install dependencies (includes transformers, torch, etc.)
+# Create virtual environment with Python 3.13+
+uv venv --python 3.13
+
+# Activate virtual environment (Windows PowerShell)
+.venv\Scripts\Activate.ps1
+
+# Install dependencies
 uv sync
 ```
 
-### 3. First Time Setup
+### 3. Run Setup
 
-The first time you run ScreenRenamer, it will automatically download the MiniCPM-V model (~8GB) from Hugging Face:
+The setup command will automatically:
+
+1. Install CUDA-enabled PyTorch (if not already installed)
+2. Configure your screenshot watch folder
+3. Download the MiniCPM-V vision model (~8GB, one-time)
 
 ```bash
-# This will download the model and set up your watch folder
-uv run screenrenamer setup
+screenrenamer setup
 ```
+
+The setup process includes:
+
+- **Step 1**: Checks for CUDA PyTorch and installs it if needed
+- **Step 2**: Configures your screenshot folder
+- **Step 3**: Downloads the vision model from Hugging Face
+
+> **Note**: After running `uv sync`, the setup command will automatically detect
+> and replace the CPU-only version of PyTorch with the CUDA-enabled version.
 
 ## Quick Start
 
 ### First Time Setup
 
-The first run will download the MiniCPM-V model (~8GB) and configure your screenshot folder:
+The first run will download the MiniCPM-V model (~8GB) and configure your
+screenshot folder. The initial model download takes 5-10 minutes depending on
+your internet connection:
 
 ```bash
 # Download model and configure watch folder
@@ -68,7 +89,7 @@ uv run screenrenamer setup
 
 The setup will:
 
-- Download MiniCPM-V model from Hugging Face (one-time, ~8GB)
+- Download MiniCPM-V model from Hugging Face (one-time, ~8GB, 5-10 minutes)
 - Show common screenshot locations
 - Let you enter a custom path
 - Create the directory if it doesn't exist
@@ -112,8 +133,8 @@ uv run screenrenamer test
 # Watch directory (default: ~/Pictures/Screenshots)
 export SCREENRENAMER_WATCH_PATH="/path/to/screenshots"
 
-# LLM model (default: openbmb/MiniCPM-V-2_6)
-export SCREENRENAMER_LLM_MODEL="openbmb/MiniCPM-V-2_6"
+# LLM model (default: openbmb/MiniCPM-V-4_5)
+export SCREENRENAMER_LLM_MODEL="openbmb/MiniCPM-V-4_5"
 
 # Request timeout (default: 120)
 export SCREENRENAMER_LLM_TIMEOUT="120"
@@ -146,7 +167,7 @@ uv run screenrenamer all
 # Specify custom watch path (overrides config)
 uv run screenrenamer start --watch-path ./my-screenshots
 
-# Note: Model is fixed to embedded MiniCPM-V-2_6
+# Note: Model is fixed to embedded MiniCPM-V-4_5
 
 # Enable debug logging
 uv run screenrenamer start --log-level DEBUG
@@ -190,15 +211,127 @@ uv run screenrenamer start --log-file screenrenamer.log
 
 ## LLM Model
 
-ScreenRenamer uses the **MiniCPM-V-2_6** model, which is automatically downloaded from Hugging Face on first setup:
+ScreenRenamer uses the **MiniCPM-V-4_5** model, which is automatically
+downloaded from Hugging Face on first setup:
 
-- **Model**: `openbmb/MiniCPM-V-2_6` (2.6B parameters)
+- **Model**: `openbmb/MiniCPM-V-4_5` (8B parameters)
 - **Storage**: ~8GB disk space
 - **Source**: Hugging Face Hub
 - **License**: Apache 2.0
-- **Capabilities**: Strong vision-language understanding for image description and analysis
+- **Capabilities**: Advanced vision-language understanding for image description
+  and analysis
 
-The model is downloaded to the `@models/` directory and cached locally for future use.
+The model is downloaded to the `@models/` directory and cached locally for
+future use.
+
+## Model Management
+
+ScreenRenamer supports switching between different vision-language models by
+simply updating your `.env` file. No code changes required!
+
+### Adding a New Model
+
+1. **Choose a compatible model** from Hugging Face Hub that supports:
+
+   - Vision-language understanding (VLMs)
+   - The transformers library
+   - Similar API to MiniCPM-V (chat interface with image input)
+
+2. **Download the model manually** (optional - you can let ScreenRenamer
+   download it):
+
+   ```bash
+   # Install huggingface_hub if needed
+   uv add huggingface-hub
+
+   # Download a model (replace 'model-name' with actual model)
+   uv run python -c "
+   from huggingface_hub import snapshot_download
+   snapshot_download('model-name', local_dir='@models/model_name')
+   "
+   ```
+
+3. **Update your `.env` file**:
+
+   ```bash
+   # Change this line to your new model
+   SCREENRENAMER_LLM_MODEL=your-model-name
+   ```
+
+4. **Test the model**:
+   ```bash
+   uv run screenrenamer test
+   ```
+
+### Supported Model Types
+
+ScreenRenamer works with any Hugging Face model that:
+
+- Has vision capabilities (can process images)
+- Uses the transformers `AutoModel` and `AutoTokenizer` interface
+- Supports chat-style inference with image inputs
+
+**Examples of compatible models:**
+
+- `openbmb/MiniCPM-V-4_5` (current default - 8B parameters)
+- `openbmb/MiniCPM-V-2_6` (smaller 2.6B version)
+- Other MiniCPM-V variants
+- Compatible LLaVA models
+- Other vision-language models with similar APIs
+
+### Model Storage Structure
+
+Models are stored in the `@models/` directory:
+
+```
+@models/
+├── openbmb_MiniCPM-V-4_5/     # Current default model
+│   ├── config.json
+│   ├── tokenizer.json
+│   ├── model-00001-of-00002.safetensors
+│   └── ...
+└── your_custom_model/         # Your custom model
+    ├── config.json
+    └── ...
+```
+
+### Automatic Model Detection
+
+When you change `SCREENRENAMER_LLM_MODEL` in your `.env` file:
+
+1. ScreenRenamer checks if the model exists in `@models/`
+2. If not found, offers to download it automatically
+3. Uses the new model for all screenshot processing
+
+**No restarts required** - just update the `.env` and run your next command!
+
+### Performance Considerations
+
+- **Model Size**: Larger models (8B+) provide better accuracy but require more
+  RAM/VRAM
+- **Download Time**: Initial downloads take 5-10 minutes for MiniCPM-V (8GB),
+  longer for larger models
+- **Disk Space**: Models range from 2GB to 20GB+ each
+- **GPU Memory**: Ensure your GPU has enough VRAM for the chosen model
+
+### Troubleshooting
+
+**Model not found error:**
+
+```bash
+# Check if model directory exists
+ls -la @models/
+
+# Re-download if corrupted
+rm -rf @models/your-model-name
+uv run screenrenamer setup  # Will re-download
+```
+
+**Out of memory errors:**
+
+- Try a smaller model variant
+- Close other GPU-intensive applications
+- Consider CPU-only inference (slower but works)
 
 ## Safety Features
 
@@ -247,7 +380,7 @@ pyproject.toml         # Project configuration
 README.md             # This file
 ```
 
-## Troubleshooting
+## Advanced Troubleshooting
 
 ### Model Download Issues
 
@@ -299,7 +432,7 @@ python --version
 uv sync --reinstall
 
 # Test model loading specifically
-uv run python -c "from screenrenamer.local_llm_processor import LocalLLMProcessor; p = LocalLLMProcessor(); p._ensure_model_loaded()"
+uv run python -c "from screenrenamer.local_llm_processor import LLMProcessor; p = LLMProcessor(); p._ensure_model_loaded()"
 ```
 
 ## License

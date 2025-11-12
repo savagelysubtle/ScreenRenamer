@@ -62,6 +62,10 @@ logs/
 .coverage
 .pytest_cache/
 .tox/
+htmlcov/
+
+# Models (downloaded from Hugging Face - don't commit large model files)
+@models/
 
 # Distribution
 *.tar.gz

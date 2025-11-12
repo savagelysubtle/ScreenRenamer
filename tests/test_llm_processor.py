@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from screenrenamer.config import LLMConfig
-from screenrenamer.llm_processor import LLMProcessor
+from screenrenamer.local_llm_processor import LLMProcessor
 
 
 class TestLLMProcessor:

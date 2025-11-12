@@ -111,10 +111,11 @@ class FileRenamer:
                 os.rename(str(file_path), str(new_path))
                 self.logger.log_rename_event(file_path, new_path, True)
 
-                # Clean up backup on success (if we don't want to keep it)
-                if backup_path and not self.config.backup_original:
+                # Clean up backup on successful rename
+                if backup_path and backup_path.exists():
                     with contextlib.suppress(OSError):
                         backup_path.unlink()
+                        self.logger.debug(f"Cleaned up backup after successful rename: {backup_path}")
 
                 return new_path
 

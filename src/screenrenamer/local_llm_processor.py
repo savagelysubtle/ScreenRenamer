@@ -1,6 +1,7 @@
 """Local LLM processor using Hugging Face transformers for vision models."""
 
 import time
+import warnings
 from pathlib import Path
 
 import torch
@@ -10,8 +11,12 @@ from transformers import AutoModel, AutoTokenizer
 from .config import LLMConfig, get_config
 from .logger import get_logger
 
+# Suppress known deprecation warnings at module level
+warnings.filterwarnings("ignore", category=FutureWarning, module="transformers")
+warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
 
-class LocalLLMProcessor:
+
+class LLMProcessor:
     """Handles LLM interactions for image analysis using local Hugging Face models."""
 
     def __init__(self, config: LLMConfig | None = None):
@@ -29,8 +34,14 @@ class LocalLLMProcessor:
         try:
             self.logger.info(f"🔄 Loading model: {self.config.model_name}")
 
-            # Set device (CPU for now, can be extended to GPU later)
-            device = "cpu"  # torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            # Check CUDA availability
+            if not torch.cuda.is_available():
+                raise RuntimeError("CUDA is not available. This model requires GPU acceleration and cannot run on CPU.")
+
+            device = torch.device("cuda")
+            self.logger.info(f"🖥️ Using GPU: {torch.cuda.get_device_name(0)}")
+            # Use float16 for GPU efficiency
+            torch_dtype = torch.float16
 
             # Load model and tokenizer
             model_path = Path("@models") / self.config.model_name.replace("/", "_")
@@ -40,15 +51,29 @@ class LocalLLMProcessor:
 
             self.logger.debug(f"📁 Loading model from: {model_path}")
 
-            # Load MiniCPM-V model
-            self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-            self.model = AutoModel.from_pretrained(
-                model_path,
-                trust_remote_code=True,
-                torch_dtype=torch.float32,  # Use float32 for CPU
-                device_map=device,
-                low_cpu_mem_usage=True,
-            )
+            # Load MiniCPM-V model with proper image processor handling
+            import warnings
+
+            # Suppress the specific FutureWarning about image_processor_class
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning,
+                                       message=".*image_processor_class.*")
+                warnings.filterwarnings("ignore", category=UserWarning,
+                                       message=".*slow image processor.*")
+
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    model_path,
+                    trust_remote_code=True,
+                )
+                self.model = AutoModel.from_pretrained(
+                    model_path,
+                    trust_remote_code=True,
+                    dtype=torch_dtype,
+                    device_map="cuda",  # Force GPU loading
+                    low_cpu_mem_usage=True,
+                )
+
+            self.logger.info("🚀 Model loaded on GPU")
 
             self.model.eval()
             self._model_loaded = True
