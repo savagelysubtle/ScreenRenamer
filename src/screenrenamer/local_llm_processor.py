@@ -35,13 +35,13 @@ class LLMProcessor:
             self.logger.info(f"🔄 Loading model: {self.config.model_name}")
 
             # Check CUDA availability
-            if not torch.cuda.is_available():
+            if not torch.cuda.is_available():  # type: ignore
                 raise RuntimeError(
                     "CUDA is not available. This model requires GPU acceleration and cannot run on CPU."
                 )
 
             device = torch.device("cuda")
-            self.logger.info(f"🖥️ Using GPU: {torch.cuda.get_device_name(0)}")
+            self.logger.info(f"🖥️ Using GPU: {torch.cuda.get_device_name(0)}")  # type: ignore
             # Use float16 for GPU efficiency
             torch_dtype = torch.float16
 
