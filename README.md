@@ -1,8 +1,9 @@
 # ScreenRenamer
 
-AI-powered screenshot renamer using local LLM vision models. Automatically
+AI-powered screenshot renamer with embedded MiniCPM-V vision model. Automatically
 watches a folder for new screenshots and renames them based on their content
-using a local vision-capable language model.
+using a locally embedded vision-capable language model. No external dependencies
+required - model downloads automatically on first setup.
 
 ## Features
 
@@ -20,7 +21,7 @@ using a local vision-capable language model.
 ## Requirements
 
 - **Python**: 3.14+
-- **Ollama**: For running local LLM models
+- **Disk Space**: ~8GB for MiniCPM-V model (downloaded automatically)
 - **UV**: For package management (recommended)
 
 ## Installation
@@ -41,37 +42,33 @@ pip install uv
 git clone https://github.com/yourusername/screenrenamer.git
 cd screenrenamer
 
-# Install dependencies
+# Install dependencies (includes transformers, torch, etc.)
 uv sync
 ```
 
-### 3. Install Ollama and Vision Model
+### 3. First Time Setup
+
+The first time you run ScreenRenamer, it will automatically download the MiniCPM-V model (~8GB) from Hugging Face:
 
 ```bash
-# Install Ollama (download from https://ollama.com/)
-# Then pull the vision model
-ollama pull openbmb/minicpm-v4.5:8b
+# This will download the model and set up your watch folder
+uv run screenrenamer setup
 ```
 
 ## Quick Start
 
 ### First Time Setup
 
-When you first run ScreenRenamer, you'll be prompted to configure which folder
-to watch for screenshots:
+The first run will download the MiniCPM-V model (~8GB) and configure your screenshot folder:
 
 ```bash
-uv run screenrenamer start
-```
-
-Or run setup explicitly:
-
-```bash
+# Download model and configure watch folder
 uv run screenrenamer setup
 ```
 
 The setup will:
 
+- Download MiniCPM-V model from Hugging Face (one-time, ~8GB)
 - Show common screenshot locations
 - Let you enter a custom path
 - Create the directory if it doesn't exist
@@ -115,17 +112,17 @@ uv run screenrenamer test
 # Watch directory (default: ~/Pictures/Screenshots)
 export SCREENRENAMER_WATCH_PATH="/path/to/screenshots"
 
-# LLM model (default: openbmb/minicpm-v4.5:8b)
-export SCREENRENAMER_LLM_MODEL="openbmb/minicpm-v4.5:8b"
-
-# Ollama server URL (default: http://localhost:11434)
-export SCREENRENAMER_LLM_URL="http://localhost:11434"
+# LLM model (default: openbmb/MiniCPM-V-2_6)
+export SCREENRENAMER_LLM_MODEL="openbmb/MiniCPM-V-2_6"
 
 # Request timeout (default: 120)
 export SCREENRENAMER_LLM_TIMEOUT="120"
 
 # Temperature for LLM responses (default: 0.1)
 export SCREENRENAMER_LLM_TEMPERATURE="0.1"
+
+# Maximum tokens for LLM responses (default: 100)
+export SCREENRENAMER_LLM_MAX_TOKENS="100"
 
 # Custom system prompt
 export SCREENRENAMER_SYSTEM_PROMPT="Your custom prompt here"
@@ -149,8 +146,7 @@ uv run screenrenamer all
 # Specify custom watch path (overrides config)
 uv run screenrenamer start --watch-path ./my-screenshots
 
-# Use different model
-uv run screenrenamer start --model llama3.2-vision:11b
+# Note: Model is fixed to embedded MiniCPM-V-2_6
 
 # Enable debug logging
 uv run screenrenamer start --log-level DEBUG
@@ -164,7 +160,7 @@ uv run screenrenamer start --log-file screenrenamer.log
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │  Folder Watcher │ -> │   LLM Processor  │ -> │  File Renamer   │
-│   (watchdog)    │    │    (Ollama)      │    │  (safe ops)     │
+│   (watchdog)    │    │ (MiniCPM-V local)│    │  (safe ops)     │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
          │                       │                       │
          └───────────────────────┼───────────────────────┘
@@ -178,11 +174,12 @@ uv run screenrenamer start --log-file screenrenamer.log
 ### Components
 
 - **FolderWatcher**: Monitors filesystem for new screenshot files using watchdog
-- **LLMProcessor**: Handles communication with Ollama vision models
+- **LLMProcessor**: Handles local inference with embedded MiniCPM-V model
 - **FileRenamer**: Safely renames files with conflict resolution and backups
 - **Orchestrator**: Coordinates all components and manages application lifecycle
 - **Config**: Centralized configuration management
 - **Logger**: Structured logging with multiple output formats
+- **ModelManager**: Downloads and manages the MiniCPM-V model from Hugging Face
 
 ## Supported File Types
 
@@ -191,15 +188,17 @@ uv run screenrenamer start --log-file screenrenamer.log
 - BMP (`.bmp`)
 - TIFF (`.tiff`)
 
-## LLM Models
+## LLM Model
 
-Recommended models with vision capabilities:
+ScreenRenamer uses the **MiniCPM-V-2_6** model, which is automatically downloaded from Hugging Face on first setup:
 
-- **MiniCPM-V 4.5** (8B) - Recommended, excellent performance and efficiency
-- **Llama 3.2 Vision** (11B/90B) - Good alternative
-- **CogVLM** - Strong VQA performance
-- **GLM-4.5V** - Latest from Z.ai
-- **Qwen2-VL** - Versatile vision tasks
+- **Model**: `openbmb/MiniCPM-V-2_6` (2.6B parameters)
+- **Storage**: ~8GB disk space
+- **Source**: Hugging Face Hub
+- **License**: Apache 2.0
+- **Capabilities**: Strong vision-language understanding for image description and analysis
+
+The model is downloaded to the `@models/` directory and cached locally for future use.
 
 ## Safety Features
 
@@ -250,17 +249,17 @@ README.md             # This file
 
 ## Troubleshooting
 
-### LLM Connection Issues
+### Model Download Issues
 
 ```bash
-# Test LLM connection
+# Test LLM connection and model loading
 uv run screenrenamer test
 
-# Check Ollama status
-ollama list
+# Re-download model if corrupted
+uv run screenrenamer setup --force-redownload
 
-# Start Ollama service (if needed)
-ollama serve
+# Check model exists in @models/ directory
+ls -la @models/
 ```
 
 ### Permission Errors
@@ -275,14 +274,32 @@ ls -la /path/to/watch/directory
 chmod 755 /path/to/watch/directory
 ```
 
-### Model Not Found
+### Insufficient Disk Space
+
+The MiniCPM-V model requires ~8GB of free disk space:
 
 ```bash
-# Pull the model
-ollama pull openbmb/minicpm-v4.5:8b
+# Check available disk space
+df -h
 
-# List available models
-ollama list
+# Clean up if needed
+# Remove downloaded model to re-download
+rm -rf @models/
+```
+
+### Model Loading Errors
+
+If the model fails to load:
+
+```bash
+# Check Python version (requires 3.14+)
+python --version
+
+# Reinstall dependencies
+uv sync --reinstall
+
+# Test model loading specifically
+uv run python -c "from screenrenamer.local_llm_processor import LocalLLMProcessor; p = LocalLLMProcessor(); p._ensure_model_loaded()"
 ```
 
 ## License
@@ -300,9 +317,10 @@ MIT License - see LICENSE file for details.
 
 ## Roadmap
 
-- [ ] Support for additional LLM backends (vLLM, transformers)
+- [x] Embed MiniCPM-V model locally (no Ollama dependency)
 - [ ] GUI interface option
 - [ ] Batch processing mode
 - [ ] Custom naming templates
-- [ ] Plugin system for different LLM providers
+- [ ] Support for additional embedded vision models
 - [ ] macOS/Windows screenshot integration
+- [ ] Model optimization (quantization, smaller variants)
